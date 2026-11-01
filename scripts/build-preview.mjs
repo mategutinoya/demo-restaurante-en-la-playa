@@ -74,22 +74,53 @@ function wirePhoto(img){
 }
 $$("img").forEach(wirePhoto);
 
-/* Always open at the top (hero). In-page links scroll without leaving a #hash in the URL,
-   so reloading or reopening the page on a phone doesn't jump halfway down. */
+/* Always open at the top (hero) — including inside link-preview services such as
+   htmlpreview.github.io, which rewrite links and inject the page with document.write.
+   - The browser's scroll restoration is disabled and any #hash left in the URL is ignored
+     and removed, so reloading/reopening never lands halfway down.
+   - Only a deliberate jump from the menu page ("Reserve a table") opens a section,
+     passed via sessionStorage instead of the URL.
+   - Top is re-asserted for the first moments after load (late restoration, fonts,
+     images) unless the visitor has already started scrolling. */
 if("scrollRestoration" in history)history.scrollRestoration="manual";
-function cleanUrl(){try{history.replaceState(history.state,"",location.pathname+location.search)}catch(e){}}
-(function(){
-  var h=location.hash,t=h.length>1?document.getElementById(decodeURIComponent(h.slice(1))):null;
-  if(t){requestAnimationFrame(function(){t.scrollIntoView()});cleanUrl()}else{if(h)cleanUrl();window.scrollTo(0,0)}
-})();
-window.addEventListener("pageshow",function(e){if(e.persisted)window.scrollTo(0,0)});
+function cleanUrl(){try{if(location.hash)history.replaceState(history.state,"",location.href.split("#")[0])}catch(e){}}
+function store(k,v){try{v===undefined?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}}
+function recall(k){try{return sessionStorage.getItem(k)}catch(e){return null}}
+var jump=recall("pv-jump");store("pv-jump");
+var jumpEl=jump?document.getElementById(jump):null;
+var userMoved=false;
+["touchstart","wheel","keydown","mousedown"].forEach(function(t){window.addEventListener(t,function(){userMoved=true},{passive:true,once:true})});
+function settle(){ if(userMoved)return; if(jumpEl)jumpEl.scrollIntoView(); else window.scrollTo(0,0); }
+cleanUrl();settle();
+requestAnimationFrame(settle);
+[60,250,600,1200].forEach(function(ms){setTimeout(settle,ms)});
+window.addEventListener("load",function(){settle();setTimeout(settle,100)});
+window.addEventListener("hashchange",cleanUrl);
+window.addEventListener("pageshow",function(e){if(e.persisted){userMoved=false;jumpEl=null;settle()}});
+function sameDoc(a){return a.href.split("#")[0]===location.href.split("#")[0]}
 document.addEventListener("click",function(e){
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
-  var a=e.target.closest&&e.target.closest("a[href^='#']");if(!a)return;
-  var el=document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1)));if(!el)return;
-  e.preventDefault();
-  el.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
-  if(el.id==="main")el.focus({preventScroll:true});
+  var a=e.target.closest&&e.target.closest("a[href]");if(!a||a.target==="_blank")return;
+  var id=a.hash?decodeURIComponent(a.hash.slice(1)):"";
+  var el=id?document.getElementById(id):null;
+  if(el&&(sameDoc(a)||a.getAttribute("href").charAt(0)==="#")){
+    e.preventDefault();e.stopPropagation();
+    userMoved=true;
+    el.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+    if(el.id==="main")el.focus({preventScroll:true});
+    return;
+  }
+  /* Link to the other page with a section (e.g. menu → reservations): remember it, drop the hash */
+  var raw=a.getAttribute("data-pv-href")||a.getAttribute("href")||"";
+  var m=raw.match(/^(index|menu)\.html#(.+)$/);
+  if(m){
+    store("pv-jump",m[2]);
+    var cur=location.href.split("#")[0];
+    if(/(index|menu)\.html/.test(cur)){
+      var target=cur.replace(/(index|menu)\.html(?![\s\S]*(index|menu)\.html)/,m[1]+".html");
+      if(target!==cur){e.preventDefault();e.stopPropagation();location.href=target;}
+    }
+  }
 },true);
 
 /* Scroll reveal */
@@ -216,6 +247,8 @@ function buildPage(file, outName, isHome, menu) {
     .replace(/href="\/#/g, isHome ? 'href="#' : 'href="index.html#')
     .replace(/href="\/menu"/g, 'href="menu.html"')
     .replace(/href="\/"/g, 'href="index.html"')
+    // keep each link's original target: preview services (htmlpreview) rewrite href
+    .replace(/<a ([^>]*?)href="([^"]*)"/g, (_m, pre, h) => `<a ${pre}data-pv-href="${h}" href="${h}"`)
     .replace("</head>", () => `<style>${css}${previewCss}</style></head>`)
     .replace("</body>", () => `<script>${previewScript(menu, isHome)}</script></body>`);
   fs.writeFileSync(path.join(outDir, outName), html);
