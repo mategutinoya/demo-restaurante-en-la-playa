@@ -56,3 +56,12 @@ src/
 - Animations respect `prefers-reduced-motion`.
 - For SEO, the site has per-page metadata, Open Graph and Twitter cards, `Restaurant` JSON-LD, `sitemap.xml` and `robots.txt`.
 - Set `NEXT_PUBLIC_SITE_URL` to your production domain.
+
+## Quick preview (no install)
+
+`preview/index.html` and `preview/menu.html` are self-contained static versions of the site, with CSS and fonts inlined and small scripts for the interactions.
+Open them from any static host. For example:
+https://raw.githack.com/mategutinoya/demo-restaurante-en-la-playa/claude/serene-ritchie-6pywhm/preview/index.html
+
+In the preview, the reservation form validates your entries and shows the confirmation, but it doesn't send anything.
+Rebuild the preview after changing the content with `npm run build:preview`.
