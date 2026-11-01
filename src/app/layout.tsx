@@ -7,6 +7,7 @@ import "@fontsource/cormorant-garamond/500.css";
 import "@fontsource-variable/dm-sans";
 import "./globals.css";
 import { photos, site } from "@/content/site";
+import ScrollManager from "@/components/ScrollManager";
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -46,7 +47,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ScrollManager />
+        {children}
+      </body>
     </html>
   );
 }

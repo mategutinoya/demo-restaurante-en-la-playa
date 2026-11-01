@@ -16,7 +16,7 @@ export default function MenuPage() {
   return (
     <>
       <Header solid />
-      <main id="main" className="pt-32 md:pt-44">
+      <main id="main" tabIndex={-1} className="outline-none pt-32 md:pt-44">
         <div className="container-x">
           <Reveal className="text-center">
             <p className="eyebrow text-sea">The menu</p>

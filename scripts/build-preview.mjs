@@ -74,6 +74,24 @@ function wirePhoto(img){
 }
 $$("img").forEach(wirePhoto);
 
+/* Always open at the top (hero). In-page links scroll without leaving a #hash in the URL,
+   so reloading or reopening the page on a phone doesn't jump halfway down. */
+if("scrollRestoration" in history)history.scrollRestoration="manual";
+function cleanUrl(){try{history.replaceState(history.state,"",location.pathname+location.search)}catch(e){}}
+(function(){
+  var h=location.hash,t=h.length>1?document.getElementById(decodeURIComponent(h.slice(1))):null;
+  if(t){requestAnimationFrame(function(){t.scrollIntoView()});cleanUrl()}else{if(h)cleanUrl();window.scrollTo(0,0)}
+})();
+window.addEventListener("pageshow",function(e){if(e.persisted)window.scrollTo(0,0)});
+document.addEventListener("click",function(e){
+  if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  var a=e.target.closest&&e.target.closest("a[href^='#']");if(!a)return;
+  var el=document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1)));if(!el)return;
+  e.preventDefault();
+  el.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+  if(el.id==="main")el.focus({preventScroll:true});
+},true);
+
 /* Scroll reveal */
 var els=$$(".reveal,.reveal-image");
 if("IntersectionObserver" in window){
